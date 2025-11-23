@@ -21,7 +21,7 @@ export async function tavilySearch(query: string): Promise<TavilyResult[]> {
       api_key: config.tavily.apiKey,
       query,
       search_depth: "advanced",
-      max_results: 5,
+      max_results: 30,
     },
     {
       headers: { "Content-Type": "application/json" },
