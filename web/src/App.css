@@ -60,21 +60,6 @@
   line-height: 1.6;
 }
 
-.markdown-body.streaming {
-  position: relative;
-}
-
-.markdown-body.streaming::after {
-  content: "";
-  display: inline-block;
-  width: 8px;
-  height: 1em;
-  background: #0f766e;
-  margin-left: 4px;
-  vertical-align: bottom;
-  animation: caret-blink 1s steps(1, end) infinite;
-}
-
 .markdown-body pre {
   background: #0b1120;
   color: #e2e8f0;
@@ -91,17 +76,6 @@
 
 .type-caret {
   display: none;
-}
-
-@keyframes caret-blink {
-  0%,
-  50% {
-    opacity: 1;
-  }
-  50.01%,
-  100% {
-    opacity: 0;
-  }
 }
 
 .streaming-dot {
