@@ -53,29 +53,24 @@ export const MessageRenderer: React.FC<Props> = ({ message, onResend, onRetry, o
           <RedoOutlined onClick={() => onRetry(message)} />
         </Tooltip>
       );
+      actions.push(
+        <Tooltip title="复制" key="copy">
+          <CopyOutlined onClick={() => copy(message.content)} />
+        </Tooltip>
+      );
     }
-    actions.push(
-      <Tooltip title="复制" key="copy">
-        <CopyOutlined
-          onClick={() =>
-            copy(
-              message.type === "text"
-                ? message.content
-                : typeof message.content === "string"
-                ? message.content
-                : JSON.stringify(message)
-            )
-          }
-        />
-      </Tooltip>
-    );
     return actions;
   };
 
   const userInlineActions =
     message.type === "text" && message.role === "user" ? renderActions() : undefined;
   const cardActions =
-    message.type === "text" && message.role === "user" ? undefined : renderActions();
+    message.type === "text" && message.role === "user"
+      ? undefined
+      : (() => {
+          const acts = renderActions();
+          return acts.length ? acts : undefined;
+        })();
 
   return (
     <Card
