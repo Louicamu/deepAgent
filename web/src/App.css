@@ -64,15 +64,14 @@
   position: relative;
 }
 
-/* 让光标跟随最后一个元素末尾，而不是单独占一行 */
-.markdown-body.streaming *:last-child::after {
+.markdown-body.streaming::after {
   content: "";
   display: inline-block;
   width: 8px;
   height: 1em;
   background: #0f766e;
   margin-left: 4px;
-  vertical-align: baseline;
+  vertical-align: bottom;
   animation: caret-blink 1s steps(1, end) infinite;
 }
 
