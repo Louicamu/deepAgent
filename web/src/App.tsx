@@ -18,7 +18,6 @@ const LABEL_ERROR = "\u8fde\u63a5\u5f02\u5e38";
 const LABEL_IDLE = "\u7a7a\u95f2";
 const LABEL_PAUSED = "\u5df2\u6682\u505c";
 const LABEL_HEADER = "AI深度研究助手";
-const LABEL_SUBHEADER = "LangChain + Multi Agent + DeepSeek + Tavily";
 const FOOTER_HINT =
   "\u652f\u6301 Markdown\uff0c\u65ad\u7ebf\u81ea\u52a8\u91cd\u8fde\uff0c\u5de5\u5177\u8c03\u7528\u53ef\u6298\u53e0\u67e5\u770b\u3002";
 
