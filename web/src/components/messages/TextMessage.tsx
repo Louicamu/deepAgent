@@ -56,11 +56,10 @@ export const TextMessage: React.FC<Props> = ({ message, actions }) => {
         {actions && <div className="message-inline-actions">{actions}</div>}
         {message.streaming && <span className="streaming-dot">···</span>}
       </div>
-      <div className="markdown-body">
+      <div className={`markdown-body ${message.streaming ? "streaming" : ""}`}>
         <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeHighlight]}>
           {displayedContent}
         </ReactMarkdown>
-        {message.streaming && <span className="type-caret" />}
       </div>
     </div>
   );

@@ -28,6 +28,15 @@
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(255, 255, 255, 0.85));
 }
 
+.content-inner {
+  width: 100%;
+  max-width: 1100px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
 .messages {
   flex: 1;
   overflow-y: auto;
@@ -51,6 +60,21 @@
   line-height: 1.6;
 }
 
+.markdown-body.streaming {
+  position: relative;
+}
+
+.markdown-body.streaming::after {
+  content: "";
+  display: inline-block;
+  width: 8px;
+  height: 1em;
+  background: #0f766e;
+  margin-left: 4px;
+  vertical-align: bottom;
+  animation: caret-blink 1s steps(1, end) infinite;
+}
+
 .markdown-body pre {
   background: #0b1120;
   color: #e2e8f0;
@@ -66,13 +90,7 @@
 }
 
 .type-caret {
-  display: inline-block;
-  width: 8px;
-  height: 1em;
-  background: #0f766e;
-  margin-left: 2px;
-  animation: caret-blink 1s steps(1, end) infinite;
-  vertical-align: bottom;
+  display: none;
 }
 
 @keyframes caret-blink {

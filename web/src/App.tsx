@@ -25,7 +25,16 @@ const FOOTER_HINT =
 function loadSessions(): Session[] {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) return JSON.parse(raw);
+    if (raw) {
+      const parsed: Session[] = JSON.parse(raw);
+      // 读取历史消息时，确保不再使用流式打字效果
+      return parsed.map((s) => ({
+        ...s,
+        messages: s.messages.map((m) =>
+          m.type === "text" ? { ...m, streaming: false } : m
+        ),
+      }));
+    }
   } catch {
     /* ignore */
   }
@@ -88,6 +97,23 @@ export default function App() {
   const stream = useAgentStream({
     sessionId: activeSession?.id ?? "default",
     onMessage: appendMessage,
+    onDone: () => {
+      // 将最后的流式消息标记为已完成，避免历史记录再次打字机渲染
+      setSessions((prev) =>
+        prev.map((s) => {
+          if (s.id !== activeSession?.id) return s;
+          if (!s.messages.length) return s;
+          const lastIdx = s.messages.length - 1;
+          const last = s.messages[lastIdx];
+          if (last.type === "text" && last.streaming) {
+            const updated = s.messages.slice();
+            updated[lastIdx] = { ...last, streaming: false };
+            return { ...s, messages: updated };
+          }
+          return s;
+        })
+      );
+    },
   });
 
   useLayoutEffect(()=>{
@@ -209,34 +235,36 @@ export default function App() {
           />
         </Header>
         <Content className="content">
-          <div className="messages" ref={messagesRef} >
-            {activeSession?.messages.map((m) => (
-              <MessageRenderer
-                key={m.id}
-                message={m}
-                onResend={(text) => {
-                  setTitleFromPrompt(text);
-                  handleResend(text);
-                }}
-                onRetry={handleRetry}
-                onDecision={onDecision}
-              />
-            ))}
-          </div>
-          <div className="input-bar">
-            <Space orientation="vertical" style={{ width: "100%" }}>
-              <ChatInput
-                onSend={(text) => {
-                  setTitleFromPrompt(text);
-                  updateUserMessage(text);
-                }}
-                isStreaming={stream.status === "streaming"}
-                onPause={stream.pause}
-              />
-              <Typography.Text type="secondary">
-                {FOOTER_HINT}
-              </Typography.Text>
-            </Space>
+          <div className="content-inner">
+            <div className="messages" ref={messagesRef} >
+              {activeSession?.messages.map((m) => (
+                <MessageRenderer
+                  key={m.id}
+                  message={m}
+                  onResend={(text) => {
+                    setTitleFromPrompt(text);
+                    handleResend(text);
+                  }}
+                  onRetry={handleRetry}
+                  onDecision={onDecision}
+                />
+              ))}
+            </div>
+            <div className="input-bar">
+              <Space orientation="vertical" style={{ width: "100%" }}>
+                <ChatInput
+                  onSend={(text) => {
+                    setTitleFromPrompt(text);
+                    updateUserMessage(text);
+                  }}
+                  isStreaming={stream.status === "streaming"}
+                  onPause={stream.pause}
+                />
+                <Typography.Text type="secondary">
+                  {FOOTER_HINT}
+                </Typography.Text>
+              </Space>
+            </div>
           </div>
         </Content>
       </Layout>
