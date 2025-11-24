@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState ,useRef,useLayoutEffect} from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { Layout, Typography, message as antdMessage, Badge, Space, Tag } from "antd";
 import { v4 as uuid } from "uuid";
 import { ChatInput } from "./components/ChatInput";
@@ -20,6 +20,31 @@ const LABEL_PAUSED = "\u5df2\u6682\u505c";
 const LABEL_HEADER = "AI深度研究助手";
 const FOOTER_HINT =
   "\u652f\u6301 Markdown\uff0c\u65ad\u7ebf\u81ea\u52a8\u91cd\u8fde\uff0c\u5de5\u5177\u8c03\u7528\u53ef\u6298\u53e0\u67e5\u770b\u3002";
+const SCROLL_BOTTOM_THRESHOLD = 16;
+const SCROLL_THROTTLE_MS = 80;
+
+function throttle<T extends (...args: unknown[]) => void>(fn: T, wait: number): T {
+  let timer: ReturnType<typeof setTimeout> | null = null;
+  let last = 0;
+  return function throttled(this: unknown, ...args: Parameters<T>) {
+    const now = Date.now();
+    const remaining = wait - (now - last);
+    if (remaining <= 0) {
+      if (timer) {
+        clearTimeout(timer);
+        timer = null;
+      }
+      last = now;
+      fn.apply(this, args);
+    } else if (!timer) {
+      timer = setTimeout(() => {
+        last = Date.now();
+        timer = null;
+        fn.apply(this, args);
+      }, remaining);
+    }
+  } as T;
+}
 
 function loadSessions(): Session[] {
   try {
@@ -51,6 +76,10 @@ export default function App() {
   const [sessions, setSessions] = useState<Session[]>(loadSessions);
   const [activeId, setActiveId] = useState<string>(sessions[0]?.id ?? "");
   const messagesRef = useRef<HTMLDivElement | null>(null);
+  const [isAtBottom, setIsAtBottom] = useState(true);
+  const [autoScrollEnabled, setAutoScrollEnabled] = useState(true);
+  const [hasOverflow, setHasOverflow] = useState(false);
+  const autoScrollRef = useRef(true);
   const activeSession = useMemo(
     () => sessions.find((s) => s.id === activeId) ?? sessions[0],
     [sessions, activeId]
@@ -59,6 +88,27 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(sessions));
   }, [sessions]);
+
+  useEffect(() => {
+    autoScrollRef.current = autoScrollEnabled;
+  }, [autoScrollEnabled]);
+
+  const scrollToBottom = useCallback((behavior: ScrollBehavior = "auto") => {
+    const el = messagesRef.current;
+    if (!el) return;
+    el.scrollTo({ top: el.scrollHeight, behavior });
+    setIsAtBottom(true);
+  }, []);
+
+  const updateScrollMetrics = useCallback(() => {
+    const el = messagesRef.current;
+    if (!el) return false;
+    const distanceToBottom = el.scrollHeight - el.clientHeight - el.scrollTop;
+    const atBottom = distanceToBottom <= SCROLL_BOTTOM_THRESHOLD;
+    setIsAtBottom(atBottom);
+    setHasOverflow(el.scrollHeight > el.clientHeight + 40);
+    return atBottom;
+  }, []);
 
   const appendMessage = (msg: Message) => {
     setSessions((prev) =>
@@ -115,15 +165,58 @@ export default function App() {
     },
   });
 
-  useLayoutEffect(()=>{
-    const el=messagesRef.current;
-    if(!el)return;
-    const scrollToBottom=()=>{
-      el.scrollTop=el.scrollHeight;
-    }
-    requestAnimationFrame(scrollToBottom)
-    setTimeout(scrollToBottom,0)
-  },[activeSession?.messages,stream.status])
+  const isStreaming = stream.status === "streaming";
+
+  useEffect(() => {
+    autoScrollRef.current = true;
+    setAutoScrollEnabled(true);
+    scrollToBottom("auto");
+  }, [activeSession?.id, scrollToBottom]);
+
+  useEffect(() => {
+    updateScrollMetrics();
+  }, [activeSession?.messages, updateScrollMetrics]);
+
+  useLayoutEffect(() => {
+    if (!autoScrollEnabled) return;
+    scrollToBottom("auto");
+  }, [activeSession?.messages, autoScrollEnabled, scrollToBottom, stream.status]);
+
+  useEffect(() => {
+    const el = messagesRef.current;
+    if (!el) return;
+    const handleScroll = throttle(() => {
+      const atBottom = updateScrollMetrics();
+      autoScrollRef.current = atBottom;
+      setAutoScrollEnabled(atBottom);
+    }, SCROLL_THROTTLE_MS);
+    el.addEventListener("scroll", handleScroll);
+    return () => el.removeEventListener("scroll", handleScroll);
+  }, [updateScrollMetrics]);
+
+  useEffect(() => {
+    const el = messagesRef.current;
+    if (!el) return;
+    const mutationObserver = new MutationObserver(() => {
+      const shouldStick = autoScrollRef.current;
+      updateScrollMetrics();
+      if (shouldStick) {
+        scrollToBottom("auto");
+      }
+    });
+    mutationObserver.observe(el, { childList: true, subtree: true, characterData: true });
+    const resizeObserver = new ResizeObserver(() => {
+      updateScrollMetrics();
+      if (autoScrollRef.current) {
+        scrollToBottom("auto");
+      }
+    });
+    resizeObserver.observe(el);
+    return () => {
+      mutationObserver.disconnect();
+      resizeObserver.disconnect();
+    };
+  }, [scrollToBottom, updateScrollMetrics]);
 
   const onDecision = async (actionId: string, decision: "approve" | "reject") => {
     const res = await fetch(
@@ -198,6 +291,8 @@ export default function App() {
     paused: LABEL_PAUSED,
   };
 
+  const showScrollToBottom = !isAtBottom && (isStreaming || hasOverflow);
+
   return (
     <Layout className="layout">
       <Sider width={260} theme="light" className="sider">
@@ -235,19 +330,34 @@ export default function App() {
         </Header>
         <Content className="content">
           <div className="content-inner">
-            <div className="messages" ref={messagesRef} >
-              {activeSession?.messages.map((m) => (
-                <MessageRenderer
-                  key={m.id}
-                  message={m}
-                  onResend={(text) => {
-                    setTitleFromPrompt(text);
-                    handleResend(text);
+            <div className="messages-container">
+              <div className="messages" ref={messagesRef}>
+                {activeSession?.messages.map((m) => (
+                  <MessageRenderer
+                    key={m.id}
+                    message={m}
+                    onResend={(text) => {
+                      setTitleFromPrompt(text);
+                      handleResend(text);
+                    }}
+                    onRetry={handleRetry}
+                    onDecision={onDecision}
+                  />
+                ))}
+              </div>
+              {showScrollToBottom && (
+                <button
+                  type="button"
+                  className="scroll-to-bottom"
+                  aria-label="回到底部"
+                  onClick={() => {
+                    setAutoScrollEnabled(true);
+                    scrollToBottom("smooth");
                   }}
-                  onRetry={handleRetry}
-                  onDecision={onDecision}
-                />
-              ))}
+                >
+                  ↓
+                </button>
+              )}
             </div>
             <div className="input-bar">
               <Space orientation="vertical" style={{ width: "100%" }}>
