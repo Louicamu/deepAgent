@@ -49,7 +49,7 @@ export async function runInformationGathering(
     {
       role: "system",
       content:
-        "你是信息收集助理，请用最多5条要点总结搜索结果，并保留可引用的URL列表。",
+        "你是信息收集助理，请用最多30条要点总结搜索结果，并保留可引用的URL列表。",
     },
     { role: "human", content: `用户问题：${userQuery}\n搜索结果：\n${combined}` },
   ] as any;
