@@ -106,7 +106,7 @@ export default function App() {
     const distanceToBottom = el.scrollHeight - el.clientHeight - el.scrollTop;
     const atBottom = distanceToBottom <= SCROLL_BOTTOM_THRESHOLD;
     setIsAtBottom(atBottom);
-    setHasOverflow(el.scrollHeight > el.clientHeight + 40);
+    setHasOverflow(el.scrollHeight > el.clientHeight + 4);
     return atBottom;
   }, []);
 
@@ -135,6 +135,9 @@ export default function App() {
 
   const updateUserMessage = (text: string) => {
     const userMsg: Message = { id: uuid(), type: "text", role: "user", content: text };
+    autoScrollRef.current = true;
+    setAutoScrollEnabled(true);
+    scrollToBottom("auto");
     setSessions((prev) =>
       prev.map((s) =>
         s.id === activeSession?.id ? { ...s, messages: [...s.messages, userMsg] } : s
