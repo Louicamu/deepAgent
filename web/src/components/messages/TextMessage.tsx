@@ -18,13 +18,14 @@ export const TextMessage: React.FC<Props> = ({ message, actions }) => {
   const roleColor =
     message.role === "user" ? "blue" : message.role === "system" ? "purple" : "green";
 
-  // Reset when a new message id arrives
+  // 当新消息到来时重置
   useEffect(() => {
     setDisplayedContent(message.streaming ? "" : message.content);
   }, [message.id, message.streaming, message.content]);
 
-  // Typewriter effect while streaming chunks arrive
+  // 当流消息到来时渲染打字机效果
   useEffect(() => {
+    //就是说：这是历史消息，不再需要流式渲染了
     if (!message.streaming) {
       setDisplayedContent(message.content);
       return;
@@ -47,7 +48,7 @@ export const TextMessage: React.FC<Props> = ({ message, actions }) => {
     return () => {
       cancelled = true;
     };
-  }, [message.content, message.streaming]);
+  }, [message.content, message.streaming]);//消息内容变了，流式状态变了
 
   return (
     <div className="message text-message">

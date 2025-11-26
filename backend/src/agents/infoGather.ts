@@ -22,7 +22,7 @@ export async function runInformationGathering(
     meta: { task: `针对「${userQuery}」进行网络搜索`, agent: agentName },
   });
 
-  // ReAct: Thought -> Action (web_search) -> Observation
+  // ReAct: 思考 -> Action (web_search调用tavily api) -> 观察/总结
   sendMessage(client, {
     id: uuid(),
     type: "toolCall",
